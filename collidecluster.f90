@@ -86,6 +86,7 @@ MODULE collide_cluster_module
             INTEGER*8,OPTIONAL                       :: epsilon_modifier_flag
             LOGICAL                                :: epsilon_flag
             REAL*8, OPTIONAL                       :: epsilon_modifier_strength
+            INTEGER*8                           :: n_mantle
            INTEGER*8, DIMENSION(:), ALLOCATABLE     :: epsilon_mantle_array
             
     
@@ -192,7 +193,9 @@ MODULE collide_cluster_module
             ! Setup modified mantle potential if applicable
             IF (epsilon_modifier_flag == 1) THEN
                 epsilon_flag = .TRUE.
-                OPEN(unit=10,file='.\Input\cluster01mantle.dat',status='old')
+                OPEN(unit=10,file='.\Input\cluster01_mantle.dat',status='old')
+                READ(unit=10,fmt=*) n_mantle
+                READ(unit=10,fmt=*)
                 DO i=1,nc1
                     READ(unit=10,fmt=*) epsilon_mantle_array(i)
                 END DO
