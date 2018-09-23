@@ -1,0 +1,229 @@
+MODULE md_lj_cell_list_module
+    USE, INTRINSIC :: iso_fortran_env, ONLY : output_unit, error_unit
+    
+    IMPLICIT NONE
+    PRIVATE
+    
+    PUBLIC :: allocate_arrays, deallocate_arrays, integrate
+    
+    TYPE, PUBLIC :: potential_type ! A composite variable for interactions comprising
+        REAL    :: cut ! the potential energy cut (but not shifted) at r_cut and
+        REAL    :: pot ! the potential energy cut-and-shifted at r_cut and
+        REAL    :: vir ! the virial and
+        REAL    :: lap ! the Laplacian and
+    CONTAINS
+        PROCEDURE :: add_potential_type
+        GENERIC   :: OPERATOR(+) => add_potential_type
+    END TYPE potential_type        
+    
+    CONTAINS    
+    
+        FUNCTION add_potential_type ( a, b ) RESULT (c)
+            IMPLICIT NONE
+            TYPE(potential_type)              :: c    ! Result is the sum of
+            CLASS(potential_type), INTENT(in) :: a, b ! the two inputs
+            c%cut = a%cut  +   b%cut
+            c%pot = a%pot  +   b%pot
+            c%vir = a%vir  +   b%vir
+            c%lap = a%lap  +   b%lap
+        END FUNCTION add_potential_type        
+        
+        SUBROUTINE allocate_arrays(n,r_cut,r,v,f)
+            USE verlet_list_module, ONLY : initialize_list
+            IMPLICIT NONE
+            INTEGER*8, INTENT(in) :: n ! Number of particles
+            REAL*8, INTENT(in) :: r_cut ! Potential cuttoff distance
+            REAL*8, DIMENSION(:,:), ALLOCATABLE, INTENT(out) :: r, v, f ! Position, velocity, and force arrays
+            
+            ALLOCATE(r(3,n),v(3,n),f(3,n))
+            
+            CALL initialize_list(n,r_cut)
+
+        END SUBROUTINE allocate_arrays
+
+        SUBROUTINE deallocate_arrays(r,v,f)
+            IMPLICIT NONE
+            REAL*8, DIMENSION(:,:), ALLOCATABLE, INTENT(inout) :: r, v, f
+        
+            DEALLOCATE(r,v,f)
+        END SUBROUTINE deallocate_arrays
+        
+        SUBROUTINE integrate(n,dt,r_cut,r,v,f,integration_type,total,nc1,nc2,cohesive_flag,cohesive)
+            IMPLICIT NONE
+            INTEGER*8, INTENT(in) :: n
+            REAL*8, INTENT(in) :: r_cut
+            REAL*8, INTENT(in):: dt        ! Time step size
+            CHARACTER*15, INTENT(in) :: integration_type
+            REAL*8, DIMENSION(:,:), ALLOCATABLE, INTENT(inout) :: r,v,f
+            TYPE(potential_type), INTENT(inout) :: total
+            REAL*8 :: dt_sq      ! dt^2
+            REAL*8 :: dt_sq_half    ! 0.5*(dt^2)
+            REAL*8 :: dt_half       ! 0.5*dt
+            INTEGER*8, OPTIONAL, INTENT(in) :: nc1
+            INTEGER*8, OPTIONAL, INTENT(in) :: nc2
+            REAL*8, OPTIONAL, INTENT(in) :: cohesive
+            LOGICAL, OPTIONAL, INTENT(in) :: cohesive_flag
+            
+            dt_half = 0.5d0*dt
+            dt_sq = dt*dt
+            dt_sq_half = 0.5d0*dt_sq
+            
+            IF (integration_type == 'Velocity Verlet') THEN
+                IF (cohesive_flag .eq. .TRUE.) THEN
+                    r(:,:) = r(:,:) + dt * v(:,:) + dt_sq_half * f(:,:)                 ! Drift step
+                    v(:,:) = v(:,:) + dt_half * f(:,:)                                  ! Kick half-step
+                    CALL force(n,r_cut,r,f,total,nc1,nc2,cohesive_flag,cohesive)        ! Force evaluation
+                    v(:,:) = v(:,:) + dt_half * f(:,:)                                  ! Kick half-step
+                ELSE
+                    r(:,:) = r(:,:) + dt * v(:,:) + dt_sq_half * f(:,:)                 ! Drift step
+                    v(:,:) = v(:,:) + dt_half * f(:,:)                                  ! Kick half-step
+                    CALL force(n,r_cut,r,f,total)                                       ! Force evaluation
+                    v(:,:) = v(:,:) + dt_half * f(:,:)                                  ! Kick half-step
+                END IF
+            END IF
+            
+        END SUBROUTINE integrate
+        
+        SUBROUTINE force(n,r_cut,r,f,total,nc1,nc2,cohesive_flag,cohesive)
+            USE verlet_list_module, ONLY : point, list, make_list
+            IMPLICIT NONE
+            INTEGER*8, INTENT(in) :: n
+            REAL*8, INTENT(in) :: r_cut
+            REAL*8, DIMENSION(:,:), ALLOCATABLE, INTENT(in) :: r
+            REAL*8, DIMENSION(:,:), ALLOCATABLE, INTENT(inout) :: f
+            TYPE(potential_type), INTENT(out) :: total
+            INTEGER*8, OPTIONAL, INTENT(in) :: nc1
+            INTEGER*8, OPTIONAL, INTENT(in) :: nc2
+            REAL*8, OPTIONAL, INTENT(in) :: cohesive
+            LOGICAL, OPTIONAL, INTENT(in) :: cohesive_flag
+            
+            INTEGER :: i, j
+            REAL*8 :: rij_sq, r_cut_sq
+            REAL*8 :: sr2, sr6, sr12, pot_cut
+            REAL, DIMENSION(3) :: rij, fij
+            TYPE(potential_type) :: pair
+            
+            ! total%pot is the nonbonded cut-and-shifted potential energy for whole system
+            ! total%cut is the nonbonded cut (but not shifted) potential energy for whole system
+            ! total%vir is the corresponding virial
+            ! total%lap is the corresponding Laplacian
+            
+            ! Calculate potential at cutoff
+            sr2     = 1.0 / r_cut**2
+            sr6     = sr2 ** 3
+            sr12    = sr6 ** 2
+            pot_cut = sr12 - sr6 ! Without numerical factor 4
+        
+            ! Calculate r squared
+            r_cut_sq = r_cut**2
+            
+            ! Make Verlet Neighbor List
+            CALL make_list ( n, r )
+            
+            f = 0.0d0
+            total = potential_type(pot=0.0d0,cut=0.0d0,vir=0.0d0,lap=0.0d0)
+            SELECT CASE (cohesive_flag)
+                CASE (.TRUE.)
+
+                    ! Cluster 1's calculations
+                    DO i=1,nc1-1 ! Begin outer loop over atoms
+                        DO j=i+1,nc1 ! Begin inner loop over atoms
+                            
+                            rij(:) = r(:,i) - r(:,j) ! Seperation vector
+                            rij_sq = SUM(rij**2) ! Squared seperation
+                    
+                            IF(rij_sq < r_cut_sq) THEN ! Check within cutoff
+                                sr2 = 1.0d0 / rij_sq
+                                sr6 = sr2 ** 3
+                                sr12 = sr6 ** 2
+                                pair%cut = sr12 - (1.0d0*sr6) ! LJ pair potential (cut but not shifted)
+                                pair%vir = pair%cut + sr12 ! LJ pair virial
+                                pair%pot = pair%cut - pot_cut ! LJ pair potential (cut-and-shifted)
+                                pair%lap = (22.0d0 * sr12 - 5.0d0 * sr6) * sr2 ! LJ pair Laplacian
+                                fij = rij * pair%vir * sr2 ! LJ pair forces
+                                total = total + pair
+                                f(:,i) = f(:,i) + fij
+                                f(:,j) = f(:,j) - fij
+                            END IF
+                        END DO
+                    END DO
+                    
+                    ! Cluster 2's calculations
+                    DO i=nc1+1,n-1 ! Begin outer loop over atoms
+                        DO j=i+1,n ! Begin inner loop over atoms
+                            rij(:) = r(:,i) - r(:,j) ! Seperation vector
+                            rij_sq = SUM(rij**2) ! Squared seperation
+                    
+                            IF(rij_sq < r_cut_sq) THEN ! Check within cutoff
+                                sr2 = 1.0d0 / rij_sq
+                                sr6 = sr2 ** 3
+                                sr12 = sr6 ** 2
+                                pair%cut = sr12 - (1.0d0*sr6) ! LJ pair potential (cut but not shifted)
+                                pair%vir = pair%cut + sr12 ! LJ pair virial
+                                pair%pot = pair%cut - pot_cut ! LJ pair potential (cut-and-shifted)
+                                pair%lap = (22.0d0 * sr12 - 5.0d0 * sr6) * sr2 ! LJ pair Laplacian
+                                fij = rij * pair%vir * sr2 ! LJ pair forces
+                                total = total + pair
+                                f(:,i) = f(:,i) + fij
+                                f(:,j) = f(:,j) - fij
+                            END IF
+                        END DO
+                    END DO
+                    
+                    ! Inter-Cluster calculations
+                    DO i=1,nc1 ! Begin outer loop over atoms
+                        DO j=nc1+1,n ! Begin inner loop over atoms
+                            rij(:) = r(:,i) - r(:,j) ! Seperation vector
+                            rij_sq = SUM(rij**2) ! Squared seperation
+                    
+                            IF(rij_sq < r_cut_sq) THEN ! Check within cutoff
+                                sr2 = 1.0d0 / rij_sq
+                                sr6 = sr2 ** 3
+                                sr12 = sr6 ** 2
+                                pair%cut = sr12 - (cohesive*sr6) ! LJ pair potential (cut but not shifted)
+                                pair%vir = pair%cut + sr12 ! LJ pair virial
+                                pair%pot = pair%cut - pot_cut ! LJ pair potential (cut-and-shifted)
+                                pair%lap = (22.0d0 * sr12 - 5.0d0 * sr6) * sr2 ! LJ pair Laplacian
+                                fij = rij * pair%vir * sr2 ! LJ pair forces
+                                total = total + pair
+                                f(:,i) = f(:,i) + fij
+                                f(:,j) = f(:,j) - fij
+                            END IF
+                        END DO
+                    END DO
+                    
+                CASE DEFAULT
+                    DO i=1,n-1 ! Begin outer loop over atoms
+                        DO k
+                        DO j=i+1,n ! Begin inner loop over atoms
+                    
+                            rij(:) = r(:,i) - r(:,j) ! Seperation vector
+                            rij_sq = SUM(rij**2) ! Squared seperation
+                    
+                            IF(rij_sq < r_cut_sq) THEN ! Check within cutoff
+                                sr2 = 1.0d0 / rij_sq
+                                sr6 = sr2 ** 3
+                                sr12 = sr6 ** 2
+                                pair%cut = sr12 - sr6 ! LJ pair potential (cut but not shifted)
+                                pair%vir = pair%cut + sr12 ! LJ pair virial
+                                pair%pot = pair%cut - pot_cut ! LJ pair potential (cut-and-shifted)
+                                pair%lap = (22.0d0 * sr12 - 5.0d0 * sr6) * sr2 ! LJ pair Laplacian
+                                fij = rij * pair%vir * sr2 ! LJ pair forces
+                                total = total + pair
+                                f(:,i) = f(:,i) + fij
+                                f(:,j) = f(:,j) - fij
+                            END IF
+                        END DO
+                    END DO
+                    
+                END SELECT
+        ! Multiply results by numerical factors
+        f         = f         * 24.0       ! 24*epsilon
+        total%cut = total%cut * 4.0        ! 4*epsilon
+        total%pot = total%pot * 4.0        ! 4*epsilon
+        total%vir = total%vir * 24.0 / 3.0 ! 24*epsilon and divide virial by 3
+        total%lap = total%lap * 24.0 * 2.0 ! 24*epsilon and factor 2 for ij and ji
+        
+        END SUBROUTINE force
+    
+END MODULE md_lj_cell_list_module

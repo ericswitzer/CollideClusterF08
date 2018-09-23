@@ -1,0 +1,53 @@
+Parameter			Corresponding Variable in Code      More Information
+================================================================================================================================================
+3.0d0				r_cut								Radial cut-off for the LJ potential (reduced units)
+0.0d0				r_sep(1)							Relative x distance between the c.o.m. of the two clusters (reduced units)
+0.0d0				r_sep(2)							Relative y distance between the c.o.m. of the two clusters (reduced units)
+10.0d0				r_sep(3)							Relative z distance between the c.o.m. of the two clusters (reduced units)
+0.0d0				v_com(1)							Relative x velocity between the c.o.m. of the two clusters (reduced units)
+0.0d0				v_com(2)							Relative y velocity between the c.o.m. of the two clusters (reduced units)
+0.0d0				v_com(3)							Relative z velocity between the c.o.m. of the two clusters (reduced units)
+0.01d0				dt									Time step size (reduced units)
+10000				nsteps								Total time steps for simulation (reduced units)
+'Velocity Verlet'	integration_type					Integration type: Velocity Verlet; pefrl=Position Extended Forest-Ruth Like
+20					energy_snapshot						Take a snapshot every n steps for energy measurements (reduced units)
+20					position_snapshot					Take a snapshot every rn steps for a VMD movie (reduced units)	
+1					cohesiveflag						Cohesive parameter flag: 1=cluster to cluster; otherwise standard LJSC
+0.35d0				cohesive							Cohesive parameter: set to 1.0d00 if flag is 'none'
+'clst-wall'			simulation_type						Type of collision simulation performed: 'clst-clst': cluster to cluster, 'clst-wall': cluster to wall
+1000.0d0			k_spring							Strength of spring constant for wall.
+1.0d0				lambda								Damping coefficient strength for wall.
+1					multi_init_clst						Multi-initial cluster flag: 0=off, 1=on	
+10					multi_init_clst_num					Number of independent clusters to test through
+0					multi_pos_flag						Multi-position algorithm flag: 0=off, 1=x-axis, 2=y-axis, 3=z-axis						
+0.0d0				multi_pos_start						Beginning relative position between the c.o.m. of the two clusters or cluster and wall (reduced units)
+1.12246204831d0		multi_pos_stop						Ending relative position between the c.o.m. of the two clusters or cluster and wall (reduced units)
+0.112246204831d0	multi_pos_step						Stepsize of the relative position between the c.o.m. of the two clusters or cluster and wall (reduced units)
+3					multi_vel_flag						Multi-velocity algorithm flag: 0=off, 1=x-axis, 2=y-axis, 3=z-axis		
+-0.2d0				multi_vel_start						Beginning relative velocity between the c.o.m. of the two clusters or cluster and wall (reduced units)
+-3.2d0				multi_vel_stop						Ending relative velocity between the c.o.m. of the two clusters or cluster and wall (reduced units)
+-0.1d0				multi_vel_step						Stepsize of the velocity position between the c.o.m. of the two clusters or cluster and wall (reduced units)
+1					movie_flag							Turn on XYZ position snapshot: 0=off, else is on
+1					epsilon_modifier_flag				Enables a different mantle epsilon
+1000.0d0			epsilon_modifier_strength			Magnitude of epsilon strength for mantle
+
+
+
+
+=============================================
+Set default values
+r_cut = 5.0d0
+r_sep(1) = 15.0d0
+r_sep(2) = 3.0d0
+r_sep(3) = 0.0d0
+v_com(1) = 4.4d0
+v_com(2) = 0.0d0
+v_com(3) = 0.0d0
+dt = 0.0023d0
+nsteps = 8000
+integration_type = 'Velocity Verlet'
+energy_snapshot = 10
+position_snapshot = 10
+cohesive_flag = .TRUE.
+cohesive = 0.2d0
+simulation_type = 'clst-clst'

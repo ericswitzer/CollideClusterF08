@@ -1,0 +1,17 @@
+Initial kinetic energy   =      0.40260007
+Initial potential energy   =  -1522.15881348
+Initial internal potential energy   =  -1557.57336426
+Initial total energy   =  -1521.75621341
+ 
+Final kinetic energy   =      1.47320586
+Final potential energy   =  -1522.63366699
+Final internal potential energy   =  -1559.02624512
+Total energy loss due to viscocity   =      0.26577712
+Final total energy   =  -1520.89468401
+ 
+# of measurements =               500
+Average kinetic energy               =      1.07928093 +/     0.60943754
+Average potential energy             =  -1522.53911206 +/     0.40030723
+Average internal potential energy    =  -1558.42731226 +/     0.75060974
+Average energy loss due to viscocity =      0.00053155
+Average total energy                 =  -1521.45983113 +/     0.25704519
