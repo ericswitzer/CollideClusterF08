@@ -86,7 +86,7 @@ MODULE collide_cluster_module
             INTEGER*8,OPTIONAL                       :: epsilon_modifier_flag
             LOGICAL                                :: epsilon_flag
             REAL*8, OPTIONAL                       :: epsilon_modifier_strength
-            REAL*8, DIMENSION(:), ALLOCATABLE     :: epsilon_mantle_array
+           INTEGER*8, DIMENSION(:), ALLOCATABLE     :: epsilon_mantle_array
             
     
             TYPE(potential_type) :: pot_total, pot_total_sq

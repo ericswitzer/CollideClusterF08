@@ -69,7 +69,7 @@ MODULE md_lj_cell_list_module
             LOGICAL, OPTIONAL, INTENT(in) :: cohesive_flag
             REAL*8, OPTIONAL, INTENT(inout) :: energyloss_visc
             REAL*8, OPTIONAL :: eps_strength
-            REAL*8, OPTIONAL, DIMENSION(:), ALLOCATABLE :: eps_array
+            INTEGER*8, OPTIONAL, DIMENSION(:), ALLOCATABLE :: eps_array
             REAL*8 :: dt_sq      ! dt^2
             REAL*8 :: dt_sq_half    ! 0.5*(dt^2)
             REAL*8 :: dt_half       ! 0.5*dt
@@ -128,7 +128,7 @@ MODULE md_lj_cell_list_module
             LOGICAL, OPTIONAL, INTENT(in) :: cohesive_flag,check_flag,list_flag
             REAL*8, DIMENSION(3,n) :: f_spring, f_visc
             REAL*8, OPTIONAL :: eps_strength
-            REAL*8, DIMENSION(:), OPTIONAL :: eps_array
+            INTEGER*8, DIMENSION(:), OPTIONAL :: eps_array
             
             
             INTEGER*8 :: i, j, k, m, index
