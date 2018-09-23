@@ -85,6 +85,7 @@ PROGRAM main
     READ(unit=10,fmt=*) multi_vel_step
     READ(unit=10,fmt=*) movie_flag
     READ(unit=10,fmt=*) epsilon_modifier_flag
+    READ(unit=10,fmt=*) epsilon_modifier_strength
     CLOSE(unit=10)
     
     ! Create a new stats file which will be used for analysis
@@ -213,7 +214,7 @@ PROGRAM main
                             
                             WRITE(unit=output_unit,fmt='(a,i,f15.8,f15.8)') 'On cluster, position, and velocity: ',clst_index,i,j
                             CALL collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-                            & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag)                            
+                            & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag=epsilon_modifier_flag)                            
                             vel_index = vel_index + 1
                         END DO
                         pos_index = pos_index + 1
@@ -254,7 +255,7 @@ PROGRAM main
                     ! Collide Clusters
                     WRITE(unit=output_unit,fmt='(a,i,f15.8)') 'On cluster, position: ',clst_index,j
                     CALL collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-                    & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag)
+                    & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag=epsilon_modifier_flag)
                     ! Advance position index
                     pos_index = pos_index + 1
                 END DO
@@ -291,7 +292,7 @@ PROGRAM main
                     ! Collide Clusters
                     WRITE(unit=output_unit,fmt='(a,i,f15.8)') 'On cluster, velocities: ',clst_index,j
                     CALL collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-                    & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag)
+                    & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag=epsilon_modifier_flag)
                     ! Advance velocity index
                     vel_index = vel_index + 1
                 END DO
@@ -350,7 +351,7 @@ PROGRAM main
                         ! Collide Clusters
                         WRITE(unit=output_unit,fmt='(a,f15.8,f15.8)') 'On position, velocity: ',i,j
                         CALL collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-                        & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag)
+                        & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag=epsilon_modifier_flag)
                         ! Advance Velocity Index
                         vel_index = vel_index + 1
                     END DO
@@ -377,7 +378,7 @@ PROGRAM main
             END IF
             WRITE(unit=output_unit,fmt='(a,i)') 'On cluster: ',clst_index
             CALL collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-                    & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag)
+                    & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag=epsilon_modifier_flag)
         END DO
         
     !!! Multiple positions  
@@ -399,7 +400,7 @@ PROGRAM main
                 END IF
                 WRITE(unit=output_unit,fmt='(a,f15.8)') 'On position: ',i
                 CALL collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-                        & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag)
+                        & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag=epsilon_modifier_flag)
                 pos_index = pos_index + 1
             END DO
         ELSE
@@ -425,7 +426,7 @@ PROGRAM main
                 END IF
                 WRITE(unit=output_unit,fmt='(a,f15.8)') 'On velocity: ',i
                 CALL collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-                        & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag)
+                        & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag=epsilon_modifier_flag)
                 vel_index = vel_index + 1
             END DO
         ELSE
@@ -437,7 +438,7 @@ PROGRAM main
         clst_str = 'cluster01-position001-velocity001'
         WRITE(unit=output_unit,fmt='(a)') 'Starting single-run simulation'
         CALL collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-                & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag)
+                & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag=epsilon_modifier_flag)
     END IF
     
     

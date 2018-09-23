@@ -83,10 +83,10 @@ MODULE collide_cluster_module
             REAL*8                                 :: energy_interact,energy_kin_c1,energy_kin_c2,energy_kin_tot
             INTEGER*8                              :: adh_flag
             
-            INTEGER*8                              :: epsilon_modifier_flag
+            INTEGER*8,OPTIONAL                       :: epsilon_modifier_flag
             LOGICAL                                :: epsilon_flag
             REAL*8, OPTIONAL                       :: epsilon_modifier_strength
-            REAL*8, DIMENSION(:), ALLOCATABLE      :: epsilon_mantle_array
+            REAL*8, DIMENSION(:), ALLOCATABLE     :: epsilon_mantle_array
             
     
             TYPE(potential_type) :: pot_total, pot_total_sq
@@ -197,7 +197,7 @@ MODULE collide_cluster_module
                     READ(unit=10,fmt=*) epsilon_mantle_array(i)
                 END DO
                 CLOSE(unit=10)
-                IF (PRESENT(epsilon_modifier_strength) == .FALSE) THEN
+                IF (PRESENT(epsilon_modifier_strength) == .FALSE.) THEN
                     epsilon_modifier_strength = 1000.0d0
                 END IF
             ELSE
@@ -206,8 +206,8 @@ MODULE collide_cluster_module
             
             ! Call force routine to initialize make_list and setup initial energy values
             IF (epsilon_flag == .TRUE.) THEN
-                CALL force(n,r_cut,r,f,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box,.TRUE.,.FALSE.,epsilon_modifier_strength,&
-                & epsilon_mantle_array)
+                CALL force(n,r_cut,r,f,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box,.TRUE.,.FALSE.,eps_strength=epsilon_modifier_strength,&
+                & eps_array=epsilon_mantle_array)
             ELSE
                 CALL force(n,r_cut,r,f,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box,.TRUE.)
             END IF
@@ -232,11 +232,25 @@ MODULE collide_cluster_module
             DO i=1,nsteps
         
                 IF(simulation_type == 'clst-wall') THEN
-                    CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,k_spring,lambda,energyloss_visc,pbc_box)
+                    IF (epsilon_flag == .TRUE.) THEN
+                        CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,k_spring,lambda,energyloss_visc,pbc_box,eps_strength=epsilon_modifier_strength,&
+                            & eps_array=epsilon_mantle_array)
+                    ELSE
+                        CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,k_spring,lambda,energyloss_visc,pbc_box)
+                    END IF
                 ELSEIF(cohesive_flag == .TRUE.) THEN
-                    CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total,nc1,nc2,cohesive_flag,cohesive)
+                    IF (epsilon_flag == .TRUE.) THEN
+                        CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total,nc1,nc2,cohesive_flag,cohesive,eps_strength=epsilon_modifier_strength,&
+                            & eps_array=epsilon_mantle_array)
+                    ELSE
+                        CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total,nc1,nc2,cohesive_flag,cohesive)
+                    END IF
                 ELSE
-                    CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total)
+                    IF (epsilon_flag == .TRUE.) THEN
+                        CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total,eps_strength=epsilon_modifier_strength,eps_array=epsilon_mantle_array)
+                    ELSE
+                        CALL integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,pot_total)
+                    END IF
                 END IF
                 
 
@@ -290,7 +304,11 @@ MODULE collide_cluster_module
     
             ! Record Final energies
             energy_kin = 0.5d0*SUM(v**2.0d0)
-            CALL force(n,r_cut,r,f,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box)
+            IF (epsilon_flag == .TRUE.) THEN
+                CALL force(n,r_cut,r,f,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box,eps_strength=epsilon_modifier_strength,eps_array=epsilon_mantle_array)
+            ELSE
+                CALL force(n,r_cut,r,f,pot_total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box)
+            END IF
             OPEN(unit=10,file='.\Output\energy_'//clst_str//'.dat',status='old',position='append')
             WRITE(unit=10,fmt='(a,f15.8)')'Final kinetic energy   = ',energy_kin
             WRITE(unit=10,fmt='(a,f15.8)')'Final potential energy   = ',pot_total%pot

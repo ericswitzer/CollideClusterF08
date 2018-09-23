@@ -53,7 +53,7 @@ MODULE md_lj_cell_list_module
             DEALLOCATE(r,v,f)
         END SUBROUTINE deallocate_arrays
         
-        SUBROUTINE integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,total,nc1,nc2,cohesive_flag,cohesive,r_start,k_spring,lambda,energyloss_visc,pbc_box)
+        SUBROUTINE integrate(n,dt,r_cut,r,v,f,integration_type,simulation_type,total,nc1,nc2,cohesive_flag,cohesive,r_start,k_spring,lambda,energyloss_visc,pbc_box,eps_strength,eps_array)
             IMPLICIT NONE
             INTEGER*8, INTENT(in) :: n
             REAL*8, INTENT(in) :: r_cut
@@ -68,6 +68,8 @@ MODULE md_lj_cell_list_module
             REAL*8, OPTIONAL, INTENT(in) :: cohesive, k_spring, lambda, pbc_box
             LOGICAL, OPTIONAL, INTENT(in) :: cohesive_flag
             REAL*8, OPTIONAL, INTENT(inout) :: energyloss_visc
+            REAL*8, OPTIONAL :: eps_strength
+            REAL*8, OPTIONAL, DIMENSION(:), ALLOCATABLE :: eps_array
             REAL*8 :: dt_sq      ! dt^2
             REAL*8 :: dt_sq_half    ! 0.5*(dt^2)
             REAL*8 :: dt_half       ! 0.5*dt
@@ -81,19 +83,31 @@ MODULE md_lj_cell_list_module
                 IF (cohesive_flag == .TRUE. .and. simulation_type == 'clst-clst') THEN
                     r(:,:) = r(:,:) + dt * v(:,:) + dt_sq_half * f(:,:)                 ! Drift step
                     v(:,:) = v(:,:) + dt_half * f(:,:)                                  ! Kick half-step
-                    CALL force(n,r_cut,r,f,total,nc1,nc2,cohesive_flag,cohesive)        ! Force evaluation
+                    IF (PRESENT(eps_strength)) THEN
+                        CALL force(n,r_cut,r,f,total,nc1,nc2,cohesive_flag,cohesive,eps_strength=eps_strength,eps_array=eps_array) 
+                    ELSE
+                        CALL force(n,r_cut,r,f,total,nc1,nc2,cohesive_flag,cohesive)        ! Force evaluation
+                    END IF
                     v(:,:) = v(:,:) + dt_half * f(:,:)                                  ! Kick half-step
                 ELSEIF (cohesive_flag == .TRUE. .and. simulation_type == 'clst-wall') THEN
                     r(:,:) = r(:,:) + dt * v(:,:) + dt_sq_half * f(:,:)                    ! Drift step
                     r(:,nc1+1:n) = r(:,nc1+1:n) - pbc_box*DNINT(r(:,nc1+1:n)/pbc_box)      ! PBC conditions for the wall
                     v(:,:) = v(:,:) + dt_half * f(:,:)                                     ! Kick half-step
-                    CALL force(n,r_cut,r,f,total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box) ! Force evaluation
-                    v(:,:) = v(:,:) + dt_half * f(:,:)                                     ! Kick half-step
+                    IF (PRESENT(eps_strength)) THEN
+                        CALL force(n,r_cut,r,f,total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box,eps_strength=eps_strength,eps_array=eps_array) 
+                    ELSE
+                        CALL force(n,r_cut,r,f,total,nc1,nc2,cohesive_flag,cohesive,r_start,v,k_spring,lambda,pbc_box) ! Force evaluation
+                    END IF
+                        v(:,:) = v(:,:) + dt_half * f(:,:)                                     ! Kick half-step
                     energyloss_visc = energyloss_visc + dt*SUM(v(:,nc1+1:n)**2.0d0)*lambda
                 ELSE
                     r(:,:) = r(:,:) + dt * v(:,:) + dt_sq_half * f(:,:)                 ! Drift step
                     v(:,:) = v(:,:) + dt_half * f(:,:)                                  ! Kick half-step
-                    CALL force(n,r_cut,r,f,total)                                       ! Force evaluation
+                    IF (PRESENT(eps_strength)) THEN
+                        CALL force(n,r_cut,r,f,total,eps_strength=eps_strength,eps_array=eps_array) 
+                    ELSE
+                        CALL force(n,r_cut,r,f,total)                                       ! Force evaluation
+                    END IF
                     v(:,:) = v(:,:) + dt_half * f(:,:)                                  ! Kick half-step
                 END IF
             END IF
@@ -193,6 +207,21 @@ MODULE md_lj_cell_list_module
                             total = total + pair
                             f(:,i) = f(:,i) + fij
                             f(:,j) = f(:,j) - fij
+                            
+                            ! Check if modified epsilon array exists
+                            IF (PRESENT(eps_strength)) THEN
+                                DO m=1,n
+                                    IF(eps_array(m) /=0) THEN
+                                        index = eps_array(m)
+                                        IF (index == i) THEN
+                                            f(:,i) = eps_strength*f(:,i)
+                                        END IF
+                                        IF (index == j) THEN
+                                            f(:,j) = eps_strength*f(:,j)
+                                        END IF
+                                    END IF
+                                END DO
+                            END IF
                         END IF
                         
                     END DO
@@ -235,14 +264,21 @@ MODULE md_lj_cell_list_module
                             f(:,i) = f(:,i) + fij
                             f(:,j) = f(:,j) - fij
                             
-                            IF
-                            DO i=1,n
-                                IF(eps_array(i) \=0) THEN
-                                    index = eps_array(i)
-                                    f(:,index) = eps_strength*f(:,i)
-                                ELSE IF
-                                    
-                            END DO
+                            
+                            ! Check if modified epsilon array exists
+                            IF (PRESENT(eps_strength)) THEN
+                                DO m=1,n
+                                    IF(eps_array(m) /=0) THEN
+                                        index = eps_array(m)
+                                        IF (index == i) THEN
+                                            f(:,i) = eps_strength*f(:,i)
+                                        END IF
+                                        IF (index == j) THEN
+                                            f(:,j) = eps_strength*f(:,j)
+                                        END IF
+                                    END IF
+                                END DO
+                            END IF
                         END IF
                     END DO
                 END DO
@@ -265,6 +301,21 @@ MODULE md_lj_cell_list_module
                             total = total + pair
                             f(:,i) = f(:,i) + fij
                             f(:,j) = f(:,j) - fij
+                            
+                            ! Check if modified epsilon array exists
+                            IF (PRESENT(eps_strength)) THEN
+                                DO m=1,n
+                                    IF(eps_array(m) /=0) THEN
+                                        index = eps_array(m)
+                                        IF (index == i) THEN
+                                            f(:,i) = eps_strength*f(:,i)
+                                        END IF
+                                        IF (index == j) THEN
+                                            f(:,j) = eps_strength*f(:,j)
+                                        END IF
+                                    END IF
+                                END DO
+                            END IF
                         END IF
                     END DO
                 END DO
