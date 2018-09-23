@@ -17,7 +17,7 @@ Parameter			Corresponding Variable in Code      More Information
 'clst-wall'			simulation_type						Type of collision simulation performed: 'clst-clst': cluster to cluster, 'clst-wall': cluster to wall
 1000.0d0			k_spring							Strength of spring constant for wall.
 1.0d0				lambda								Damping coefficient strength for wall.
-1					multi_init_clst						Multi-initial cluster flag: 0=off, 1=on	
+0					multi_init_clst						Multi-initial cluster flag: 0=off, 1=on	
 10					multi_init_clst_num					Number of independent clusters to test through
 0					multi_pos_flag						Multi-position algorithm flag: 0=off, 1=x-axis, 2=y-axis, 3=z-axis						
 0.0d0				multi_pos_start						Beginning relative position between the c.o.m. of the two clusters or cluster and wall (reduced units)

@@ -129,6 +129,7 @@ MODULE md_lj_cell_list_module
             REAL*8, DIMENSION(3,n) :: f_spring, f_visc
             REAL*8, OPTIONAL :: eps_strength
             INTEGER*8, DIMENSION(:), OPTIONAL :: eps_array
+            INTEGER*8 :: n_mantle
             
             
             INTEGER*8 :: i, j, k, m, index
@@ -151,6 +152,11 @@ MODULE md_lj_cell_list_module
         
             ! Calculate r cutoff squared
             r_cut_sq = r_cut**2.0d0
+            
+            ! Check if mantle exists
+            IF(PRESENT(eps_strength)) THEN
+                n_mantle = SIZE(eps_array)
+            END IF
             
             ! Make Verlet Neighbor List
             IF(PRESENT(list_flag)) THEN
@@ -210,7 +216,7 @@ MODULE md_lj_cell_list_module
                             
                             ! Check if modified epsilon array exists
                             IF (PRESENT(eps_strength)) THEN
-                                DO m=1,n
+                                DO m=1,n_mantle
                                     IF(eps_array(m) /=0) THEN
                                         index = eps_array(m)
                                         IF (index == i) THEN
@@ -267,7 +273,7 @@ MODULE md_lj_cell_list_module
                             
                             ! Check if modified epsilon array exists
                             IF (PRESENT(eps_strength)) THEN
-                                DO m=1,n
+                                DO m=1,n_mantle
                                     IF(eps_array(m) /=0) THEN
                                         index = eps_array(m)
                                         IF (index == i) THEN
@@ -304,7 +310,7 @@ MODULE md_lj_cell_list_module
                             
                             ! Check if modified epsilon array exists
                             IF (PRESENT(eps_strength)) THEN
-                                DO m=1,n
+                                DO m=1,n_mantle
                                     IF(eps_array(m) /=0) THEN
                                         index = eps_array(m)
                                         IF (index == i) THEN

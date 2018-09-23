@@ -14,7 +14,7 @@ MODULE collide_cluster_module
     CONTAINS
     
         SUBROUTINE collide_cluster(r_cut,r_sep,v_com,dt,nsteps,integration_type,energy_snapshot,position_snapshot,&
-            & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag,epsilon_modifier_strength)
+            & cohesive_flag_num,cohesive,simulation_type,k_spring,lambda,clst_str,epsilon_modifier_flag,epsilon_mod_strength)
 
             IMPLICIT NONE
   
@@ -85,7 +85,8 @@ MODULE collide_cluster_module
             
             INTEGER*8,OPTIONAL                       :: epsilon_modifier_flag
             LOGICAL                                :: epsilon_flag
-            REAL*8, OPTIONAL                       :: epsilon_modifier_strength
+            REAL*8, OPTIONAL                       :: epsilon_mod_strength
+            REAL*8                                  :: epsilon_modifier_strength
             INTEGER*8                           :: n_mantle
            INTEGER*8, DIMENSION(:), ALLOCATABLE     :: epsilon_mantle_array
             
@@ -195,12 +196,13 @@ MODULE collide_cluster_module
                 epsilon_flag = .TRUE.
                 OPEN(unit=10,file='.\Input\cluster01_mantle.dat',status='old')
                 READ(unit=10,fmt=*) n_mantle
+                ALLOCATE(epsilon_mantle_array(n_mantle))
                 READ(unit=10,fmt=*)
-                DO i=1,nc1
+                DO i=1,n_mantle
                     READ(unit=10,fmt=*) epsilon_mantle_array(i)
                 END DO
                 CLOSE(unit=10)
-                IF (PRESENT(epsilon_modifier_strength) == .FALSE.) THEN
+                IF (PRESENT(epsilon_mod_strength) == .FALSE.) THEN
                     epsilon_modifier_strength = 1000.0d0
                 END IF
             ELSE
